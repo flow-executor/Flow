@@ -2,7 +2,7 @@
 // worker with its graded record and settled totals. The record is the
 // ranking — counts move only on real verdict-engine grades and real
 // settlements, never on self-report.
-const hub = require("../../../_hub");
+const hub = require("../../_hub");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");

@@ -3,7 +3,7 @@
 // facilitator rail as every Flow payment; the listing is marked
 // SETTLED only with the real settlement tx ref. Auth: x-exchange-key
 // (the board operator key, same as every exchange action endpoint).
-const hub = require("../../../_hub");
+const hub = require("../../_hub");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");

@@ -2,7 +2,7 @@
 // Auth: personal_sign of "flow-exchange:register:<wallet>" by the
 // wallet itself (see api/_hub.js). GET ?id=<wallet> — one profile
 // with its merged record (passport counts + hub claims + settled USD).
-const hub = require("../../../_hub");
+const hub = require("../../_hub");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");

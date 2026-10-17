@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
     // Hub overlay (fail-open): annotate listings with their public
     // hub claim, if any — the board shows who is on the work.
     try {
-      const hub = require("../../../_hub");
+      const hub = require("../../_hub");
       const claims = await hub.publicClaims();
       for (const l of state.listings || []) {
         const c = claims[l.id];

@@ -1,7 +1,7 @@
 // POST /api/exchange/claim — a registered worker claims an OPEN or
 // BIDDING listing. First claim wins. Auth: personal_sign of
 // "flow-exchange:claim:<PX-ID>:<wallet>" by the claiming wallet.
-const hub = require("../../../_hub");
+const hub = require("../../_hub");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");

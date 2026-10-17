@@ -3,7 +3,7 @@
 // UNSETTLED. The signature is the lock: it can only ever pay that
 // worker that amount. GET ?id=PX-0001 — public escrow status (the
 // signature itself is never exposed).
-const hub = require("../../../_hub");
+const hub = require("../../_hub");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");

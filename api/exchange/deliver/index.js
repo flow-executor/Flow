@@ -3,7 +3,7 @@
 // "flow-exchange:deliver:<PX-ID>:<wallet>" by the claiming wallet.
 // Delivery is a claim of work, not a grade: the verdict engine still
 // grades before any escrow can release.
-const hub = require("../../../_hub");
+const hub = require("../../_hub");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
