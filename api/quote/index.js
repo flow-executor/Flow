@@ -5,6 +5,21 @@ const stats = require("../_stats");
 const enrolledMod = require("../_enrolled");
 
 module.exports = async (req, res) => {
+  if (req.method === "GET") {
+    // Agent-eye rule (back-test 2026-10-17): a probe must meet the
+    // pitch, not a dead end — GET returns the full payment challenge
+    // plus the exact call shape. Paying still requires a POST.
+    const body = x402.paymentRequiredBody(req, undefined);
+    body.how = {
+      method: "POST",
+      contentType: "application/json",
+      body: { tokenIn: "0x… or symbol (USDC, WETH, cbBTC)", tokenOut: "0x… or symbol", amountIn: "atomic units as a string" },
+      payment: "Sign accepts[0] as an x402 v2 \"exact\" EIP-3009 authorization and retry as POST with an X-PAYMENT header.",
+      free_taste: "POST /api/precheck — combined quote + safety check, free.",
+      docs: "https://flow-kg4x.vercel.app/llms.txt",
+    };
+    return res.status(402).json(body);
+  }
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
   }

@@ -14,6 +14,16 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   try {
     const { state, source } = await px.loadState();
+    // Hub overlay (fail-open): annotate listings with their public
+    // hub claim, if any — the board shows who is on the work.
+    try {
+      const hub = require("../../../_hub");
+      const claims = await hub.publicClaims();
+      for (const l of state.listings || []) {
+        const c = claims[l.id];
+        if (c) l.hub_claim = { worker: c.worker, worker_name: c.worker_name, status: c.status, at: c.at };
+      }
+    } catch { /* overlay is best-effort */ }
     const u = new URL(req.url, "https://flow-kg4x.vercel.app");
     const status = u.searchParams.get("status");
     const door = u.searchParams.get("door");

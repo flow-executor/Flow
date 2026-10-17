@@ -600,6 +600,20 @@ const RESOURCE_META = {
 };
 
 async function handler(req, res) {
+  if (req.method === "GET") {
+    // Agent-eye rule (back-test 2026-10-17): GET returns the full
+    // payment challenge plus the exact call shape.
+    const body = x402.paymentRequiredBody(req, RESOURCE_META);
+    body.how = {
+      method: "POST",
+      contentType: "application/json",
+      body: { address: "0x… token or contract address on Base", chain: "base (optional)" },
+      payment: "Sign accepts[0] as an x402 v2 \"exact\" EIP-3009 authorization and retry as POST with an X-PAYMENT header.",
+      free_taste: "POST /api/precheck — combined quote + safety check, free.",
+      docs: "https://flow-kg4x.vercel.app/llms.txt",
+    };
+    return res.status(402).json(body);
+  }
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
   }

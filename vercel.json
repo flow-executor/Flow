@@ -80,6 +80,24 @@
     },
     "api/space/opkey/index.js": {
       "maxDuration": 10
+    },
+    "api/exchange/worker/index.js": {
+      "maxDuration": 10
+    },
+    "api/exchange/workers/index.js": {
+      "maxDuration": 10
+    },
+    "api/exchange/claim/index.js": {
+      "maxDuration": 10
+    },
+    "api/exchange/deliver/index.js": {
+      "maxDuration": 10
+    },
+    "api/exchange/escrow/index.js": {
+      "maxDuration": 10
+    },
+    "api/exchange/release/index.js": {
+      "maxDuration": 30
     }
   },
   "version": 2,
@@ -103,6 +121,10 @@
     {
       "source": "/api/starter/claim-action",
       "destination": "/api/starter?route=claim-action"
+    },
+    {
+      "source": "/.well-known/agent-card.json",
+      "destination": "/agent-card.json"
     }
   ],
   "ignoreCommand": "git diff HEAD^ HEAD --quiet -- . \":(exclude)stats/explanation.json\""
