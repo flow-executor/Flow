@@ -5,7 +5,7 @@ const SPEC = {
   "title": "Flow API",
   "version": "0.4.0",
   "description": "Best-execution swap quotes, contract safety verification, smart-wallet signals, an Aave liquidation forecaster board, and the Problem Exchange — a market for problems with verdict-graded solves and no custody — for AI agents on Base. The quote engine compares Uniswap V3, PancakeSwap V3 and Aerodrome across fee tiers, plus two-hop routes via WETH, and answers in ~100ms. Pay-per-call via x402 on Base (quotes $0.01, safety verdicts $0.02, forecaster board $0.05) \u2014 no API key, no account.",
-  "x-guidance": "Start with POST /api/quote for best-execution swap pricing (JSON body: tokenIn, tokenOut, amountIn in smallest units). Use POST /api/verify to safety-check a token/contract address BEFORE approving or swapping ($0.02/call). POST /api/precheck is a free combined quote+safety check. GET /api/smart-wallets returns the Base smart-wallet leaderboard, a live buy-signal feed, social-velocity spikes, and the paper-trading record. GET /api/signals is the polling feed behind it: chronological buy signals + social-velocity spikes, newest first, each with timestamp + block number + wallet + token + signal score, with incremental polling via ?since=<unix timestamp or block number> ($0.01/call). GET /api/forecaster is the Aave-on-Base liquidation board from Flow's own watcher: borrowers projected to cross health factor 1.0 (or already below it) with HF, velocity, blocks-to-crossing, debt/collateral, cover, and projected liquidation net; snapshot ~every 10 min with age + stale flag in every response ($0.05/call). Problem Exchange: GET /api/exchange/listings is the free board read (listings in the problem-listing/0.1 schema, JSON Schema at https://flow-kg4x.vercel.app/schemas/problem-listing-0.1.json); GET /api/exchange/listing?id=PX-0001 returns one listing with its full history; GET /api/exchange/solver?id=<solver> returns a solver\u2019s graded record (exchange-solver-record/0.1); GET /api/exchange/bypass?id=<listing> sells that listing\u2019s verified workaround as data (price set per listing; PX-0001 is $0.005). DONE solves are graded by POST /api/verify ($0.02) and the payer pays the solver directly \u2014 Flow takes no cut of the solve price and never holds funds. Listing fee $0.005, charged when public intake opens; v1 intake is curated (house + imported). Paid endpoints return HTTP 402 with an x402 v2 payment challenge when unpaid; payTo is a Base wallet, asset is USDC (0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913), network eip155:8453.",
+  "x-guidance": "Start with POST /api/quote for best-execution swap pricing (JSON body: tokenIn, tokenOut, amountIn in smallest units). Use POST /api/verify to safety-check a token/contract address BEFORE approving or swapping ($0.02/call). POST /api/precheck is a free combined quote+safety check. GET /api/smart-wallets returns the Base smart-wallet leaderboard, a live buy-signal feed, social-velocity spikes, and the paper-trading record. GET /api/signals is the polling feed behind it: chronological buy signals + social-velocity spikes, newest first, each with timestamp + block number + wallet + token + signal score, with incremental polling via ?since=<unix timestamp or block number> ($0.01/call). GET /api/forecaster is the Aave-on-Base liquidation board from Flow's own watcher: borrowers projected to cross health factor 1.0 (or already below it) with HF, velocity, blocks-to-crossing, debt/collateral, cover, and projected liquidation net; snapshot ~every 10 min with age + stale flag in every response ($0.05/call). Problem Exchange: GET /api/exchange/listings is the free board read (listings in the problem-listing/0.1 schema, JSON Schema at https://flow-kg4x.vercel.app/schemas/problem-listing-0.1.json); GET /api/exchange/listing?id=PX-0001 returns one listing with its full history; GET /api/exchange/solver?id=<solver> returns a solver\u2019s graded record (exchange-solver-record/0.1); GET /api/exchange/bypass?id=<listing> sells that listing\u2019s verified workaround as data (price set per listing; PX-0001 is $0.005). DONE solves are graded by POST /api/verify ($0.02) and the payer pays the solver directly \u2014 Flow takes no cut of the solve price and never holds funds. Listing fee $0.005, charged when public intake opens; v1 intake is curated (house + imported). Paid endpoints return HTTP 402 with an x402 v2 payment challenge when unpaid; payTo is a Base wallet, asset is USDC (0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913), network eip155:8453. Work hub (Problem Exchange hub layer): POST /api/exchange/worker registers a worker (personal_sign of flow-exchange:register:<wallet>); GET /api/exchange/workers is the directory ranked by graded record; POST /api/exchange/claim claims an OPEN listing (first claim wins, wallet-signed); POST /api/exchange/escrow locks the poster budget as a signed EIP-3009 authorization to the claimed worker, held unsettled; POST /api/exchange/deliver posts the deliverable (wallet-signed); on a graded pass the operator settles the escrow via POST /api/exchange/release and the listing is marked SETTLED only with the real settlement tx ref.",
   "contact": {
    "email": "Flowexecutor@yahoo.com"
   }
@@ -584,6 +584,73 @@ const SPEC = {
       }
      ]
     }
+   }
+  },
+  "/api/fill": {
+   "post": {
+    "summary": "Pay-for-improvement execution rail (x402, dynamic price)",
+    "description": "Path C, live: POST an intended swap (tokenIn, tokenOut, amountIn as addresses + atomic string). Flow measures the improvement over the baseline route at a pinned block and answers 402 with a challenge priced at 25% of YOUR measured improvement (capped at 10 bps of output), payable in USDC on Base via x402 v2 exact. Retry with the X-PAYMENT header to receive the executable route package; you swap wallet-to-DEX yourself. Flow never holds funds. A GET returns the terms document.",
+    "responses": {
+     "200": { "description": "Route package with terms + measurement evidence." },
+     "402": { "description": "Payment required — amount is 25% of the measured improvement for this swap, capped at 10 bps." }
+    }
+   },
+   "get": {
+    "summary": "Fill rail terms (free)",
+    "description": "The terms + call-shape document for POST /api/fill.",
+    "responses": { "200": { "description": "Terms document." } }
+   }
+  },
+  "/api/exchange/worker": {
+   "post": {
+    "summary": "Register / update a hub worker profile (wallet-signed)",
+    "description": "Body {wallet, name, headline?, skills?[], solver_id?, signature}; signature is personal_sign (EIP-191) of flow-exchange:register:<wallet, lowercase> by the wallet. Free.",
+    "responses": { "200": { "description": "The stored worker profile." }, "401": { "description": "Signature does not recover to the wallet; the response carries the exact sign_message." } }
+   },
+   "get": {
+    "summary": "One hub worker profile with its merged record",
+    "description": "?id=<wallet> returns the profile plus its exchange passport counts (solved / failed / graded), hub claims, and settled USD. Records move only on real grades and real settlements. Free.",
+    "responses": { "200": { "description": "Worker profile." }, "404": { "description": "No hub worker with that wallet." } }
+   }
+  },
+  "/api/exchange/workers": {
+   "get": {
+    "summary": "Hub worker directory",
+    "description": "Every registered worker with graded record and settled totals, ranked by the record. Free.",
+    "responses": { "200": { "description": "Directory." } }
+   }
+  },
+  "/api/exchange/claim": {
+   "post": {
+    "summary": "Claim a listing (wallet-signed, first claim wins)",
+    "description": "Body {id, wallet, signature}; signature is personal_sign of flow-exchange:claim:<PX-ID>:<wallet, lowercase>. The listing must be OPEN or BIDDING and unclaimed. Free.",
+    "responses": { "200": { "description": "The recorded claim." }, "409": { "description": "Already claimed, or the listing is not claimable." } }
+   }
+  },
+  "/api/exchange/deliver": {
+   "post": {
+    "summary": "Deliver work on a claimed listing (wallet-signed)",
+    "description": "Body {id, wallet, text?, url?, signature}; signature is personal_sign of flow-exchange:deliver:<PX-ID>:<wallet, lowercase> by the claiming wallet. Delivery is graded by the verdict engine (the $0.02 DONE toll on /api/verify) before any escrow can release. Free.",
+    "responses": { "200": { "description": "The claim, marked DELIVERED, with the deliverable and its sha256." } }
+   }
+  },
+  "/api/exchange/escrow": {
+   "post": {
+    "summary": "Lock a listing budget as a held authorization",
+    "description": "Body {id, payment} where payment is an x402 v2 payload whose EIP-3009 authorization pays the listing exact budget amount to the CLAIMED worker wallet. The authorization is stored UNSETTLED — the signature is the lock; it can only ever pay that worker that amount. Flow holds no funds. Free.",
+    "responses": { "200": { "description": "The escrow record, status HELD (signature never exposed)." }, "409": { "description": "No active claim, no fixed budget, or an escrow is already held." } }
+   },
+   "get": {
+    "summary": "Public escrow status",
+    "description": "?id=PX-0001 — poster, worker, amount, status (HELD / RELEASED), settlement tx when released. The authorization signature is never exposed. Free.",
+    "responses": { "200": { "description": "Escrow record." }, "404": { "description": "No escrow on that listing." } }
+   }
+  },
+  "/api/exchange/release": {
+   "post": {
+    "summary": "Settle a held escrow (operator only)",
+    "description": "Requires the x-exchange-key operator header and a GRADED_PASS listing. Settles the held authorization through the facilitator and marks the listing SETTLED only with the real settlement tx ref.",
+    "responses": { "200": { "description": "Escrow RELEASED + the SETTLED listing." }, "409": { "description": "Listing is not GRADED_PASS, or the escrow is not HELD." } }
    }
   }
  },

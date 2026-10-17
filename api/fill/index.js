@@ -88,6 +88,21 @@ async function quoteAndFee(body, blockTag) {
 }
 
 module.exports = async (req, res) => {
+  if (req.method === "GET") {
+    // Agent-eye rule (back-test round 2, 2026-10-17): the fee is
+    // computed from the caller's own swap, so no payable challenge
+    // exists before a POST — answer with the terms and the exact
+    // call shape instead of a bare 405.
+    return res.status(200).json({
+      service: "flow-fill",
+      method: "POST",
+      what: "Pay-for-improvement execution (Path C, live): Flow measures your swap's improvement over the baseline route at a pinned block, you pay the fee via x402, and the executable route package is released. You then swap wallet-to-DEX yourself — Flow never holds funds.",
+      terms: { fee: "25% of the measured improvement", cap_bps: 10, currency: "USDC on Base (x402 v2 exact)", custody: "none" },
+      body: { tokenIn: "0x… token address", tokenOut: "0x… token address", amountIn: "atomic units as a string" },
+      flow: "POST unpaid → 402 challenge priced from YOUR measured improvement → retry with an X-PAYMENT header → 200 with the route package, its terms object, and the measurement evidence.",
+      docs: "https://flow-kg4x.vercel.app/llms.txt",
+    });
+  }
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
   }
